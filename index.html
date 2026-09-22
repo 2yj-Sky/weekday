@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F6F6F4">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="一周提醒">
+<title>一周提醒</title>
+<style>
+:root{
+  --bg:#F6F6F4; --card:#FFFFFF; --line:#E6E4DE; --line2:#D3D1C7;
+  --tx:#2C2C2A; --tx2:#5F5E5A; --tx3:#888780;
+  --morning:#BA7517; --morning-bg:#FAEEDA;
+  --night:#534AB7; --night-bg:#EEEDFE;
+  --today:#185FA5; --today-bg:#E6F1FB;
+  --duty:#993C1D; --duty-bg:#FCEBEB;
+  --rest:#3B6D11; --rest-bg:#EAF3DE;
+  --done:#B4B2A9; --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--tx);font-size:14px;line-height:1.5;
+  padding:20px 16px calc(40px + env(safe-area-inset-bottom));
+}
+.wrap{max-width:1180px;margin:0 auto}
+.sec{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin-bottom:12px}
+.sec-t{font-size:12px;color:var(--tx3);margin-bottom:8px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.sec-t b{font-size:13px;color:var(--tx);font-weight:600}
+
+/* 顶部 */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin-bottom:14px}
+h1{font-size:18px;font-weight:600;letter-spacing:.3px}
+.sub{font-size:12px;color:var(--tx3);margin-left:8px}
+.spacer{flex:1}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+button.tool{font:inherit;font-size:12px;padding:6px 11px;border:1px solid var(--line2);background:var(--card);border-radius:7px;color:var(--tx2);cursor:pointer}
+button.tool:hover{border-color:var(--tx3);color:var(--tx)}
+button.tool.on{background:var(--today-bg);border-color:var(--today);color:var(--today)}
+button.tool.warn{border-color:var(--duty);color:var(--duty)}
+a.tool.lnk{text-decoration:none;display:inline-flex;align-items:center;line-height:1.2;min-height:29px}
+
+/* 排班 */
+.sched{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.chip{
+  flex:1 0 auto;min-width:96px;text-align:left;font:inherit;cursor:pointer;
+  border:1px solid var(--line2);background:var(--card);border-radius:9px;padding:7px 9px;color:var(--tx2);
+}
+.chip .c-dow{font-size:12px;font-weight:600;color:var(--tx)}
+.chip .c-mode{font-size:13px;font-weight:600;margin-top:2px}
+.chip .c-wake{font-size:11px;color:var(--tx3);margin-top:1px}
+.chip.m-normal{background:#F1EFE8;border-color:var(--line2)}
+.chip.m-normal .c-mode{color:var(--tx2)}
+.chip.m-duty{background:var(--duty-bg);border-color:var(--duty)}
+.chip.m-duty .c-mode{color:var(--duty)}
+.chip.m-rest{background:var(--rest-bg);border-color:var(--rest)}
+.chip.m-rest .c-mode{color:var(--rest)}
+.chip.today{box-shadow:0 0 0 2px var(--today-bg);border-color:var(--today)}
+.legend{font-size:11.5px;color:var(--tx3);margin-top:8px}
+.legend i{font-style:normal;font-weight:600}
+
+/* 设置行 */
+.srow{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px;color:var(--tx2)}
+.srow label{display:flex;align-items:center;gap:5px;cursor:pointer}
+select.sel{font:inherit;font-size:12.5px;padding:5px 7px;border:1px solid var(--line2);border-radius:6px;background:var(--card);color:var(--tx)}
+input.inp{font:inherit;font-size:12.5px;padding:6px 8px;border:1px solid var(--line2);border-radius:6px;background:var(--card);color:var(--tx);width:120px}
+input.inp.wide{width:min(320px,80vw)}
+input.inp:focus{outline:none;border-color:var(--today)}
+details.sync{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+details.sync summary{font-size:12.5px;color:var(--tx2);cursor:pointer;padding:4px 0}
+details.sync summary:hover{color:var(--tx)}
+.state{font-size:12.5px}
+.state.ok{color:var(--rest);font-weight:600}
+.state.no{color:var(--duty)}
+
+/* 今日摘要 */
+.hero{display:flex;flex-wrap:wrap;gap:6px 22px;align-items:center}
+.hero .hl{font-size:15px;font-weight:600}
+.hero .kv{font-size:13px;color:var(--tx2)}
+.hero .kv b{color:var(--tx);font-weight:600}
+.hero .next{color:var(--night);font-weight:500;font-size:13px}
+
+/* 周导航 */
+.navbar{display:flex;align-items:center;gap:8px;margin:12px 0 10px;font-size:13px;color:var(--tx2)}
+.navbar b{color:var(--tx);font-weight:600}
+
+/* 一周迷你条 */
+.strip{display:none;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 0 8px}
+.mini{flex:0 0 auto;min-width:80px;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 9px;cursor:pointer;text-align:left;font:inherit}
+.mini .m-dow{font-size:12px;font-weight:600}
+.mini .m-date{font-size:11px;color:var(--tx3);margin-bottom:4px}
+.mini .m-wake{font-size:11px;font-weight:600;color:var(--morning)}
+.mini .m-cnt{font-size:11px;color:var(--tx3);margin-top:2px}
+.mini.today{border-color:var(--today)} .mini.today .m-dow{color:var(--today)}
+.mini.sel{background:var(--today-bg);border-color:var(--today);box-shadow:0 0 0 2px var(--today-bg)}
+.mini .dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--night);margin-left:4px;vertical-align:middle}
+.mini .m-mode{font-size:11px;font-weight:600;margin-top:2px}
+
+/* 主体 */
+.board.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}
+.board.focus{display:block}
+.day{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;min-height:120px}
+.day.today{border-color:var(--today);box-shadow:0 0 0 2px var(--today-bg)}
+.day.rest{background:#FCFCFB}
+.dhead{display:flex;align-items:baseline;gap:6px;margin-bottom:2px}
+.dow{font-size:13px;font-weight:600}
+.dnum{font-size:11px;color:var(--tx3)}
+.dtag{margin-left:auto;font-size:11px;color:var(--tx3)}
+.day.today .dow{color:var(--today)}
+
+.wake{display:flex;align-items:center;gap:6px;margin:6px 0 8px;background:var(--morning-bg);border-radius:7px;padding:5px 7px}
+.wake .wl{font-size:11px;color:var(--morning);font-weight:600;white-space:nowrap}
+.wake input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:13px;font-weight:600;color:#854F0B;padding:0;outline:none}
+.wake.none{background:#F1EFE8}
+.wake.none .wl,.wake.none .wph{color:var(--tx3)}
+.wph{font-size:12px;color:var(--tx3)}
+.bell{flex:none;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--morning);cursor:pointer;padding:0;border-radius:4px}
+.bell.off{color:var(--done);opacity:.55}
+.bell:hover{background:rgba(0,0,0,.05)}
+
+.items{list-style:none;display:flex;flex-direction:column;gap:4px}
+.item{display:flex;align-items:center;gap:5px;padding:3px 4px;border-radius:6px;border-left:2px solid transparent}
+.item:hover{background:#FAFAF8}
+.item.night{border-left-color:var(--night)}
+.item.morning{border-left-color:var(--morning)}
+.item.next{background:var(--night-bg)}
+.item.done .time,.item.done .text{color:var(--done);text-decoration:line-through}
+.ck{width:15px;height:15px;flex:none;border:1.5px solid var(--line2);border-radius:4px;background:var(--card);cursor:pointer;padding:0;position:relative}
+.item.done .ck{background:var(--done);border-color:var(--done)}
+.item.done .ck::after{content:"";position:absolute;left:3.5px;top:1px;width:4px;height:7px;border:solid #fff;border-width:0 1.6px 1.6px 0;transform:rotate(42deg)}
+.time{font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums;cursor:pointer;padding:2px;border-radius:3px;flex:none}
+.time:hover{background:#EFEDE7}
+.time input{width:56px;border:0;background:transparent;font:inherit;font-size:11px;color:var(--tx);outline:none}
+.text{flex:1;min-width:0;font-size:12.5px;color:var(--tx);cursor:text;padding:2px;border-radius:3px;outline:none;word-break:break-all}
+.text:hover{background:#EFEDE7}
+.text:focus{background:#fff;box-shadow:inset 0 0 0 1px var(--line2)}
+.del{flex:none;width:18px;height:18px;line-height:1;border:0;background:transparent;color:var(--tx3);font-size:15px;cursor:pointer;border-radius:4px;opacity:0}
+.item:hover .del{opacity:1}
+.del:hover{background:#FCEBEB;color:#A32D2D}
+.add{margin-top:6px;font:inherit;font-size:11px;color:var(--tx3);background:transparent;border:1px dashed var(--line2);border-radius:6px;padding:4px;cursor:pointer}
+.add:hover{color:var(--tx);border-color:var(--tx3)}
+
+/* 页面内提示条 */
+.toast{
+  position:fixed;left:50%;transform:translate(-50%,-24px);top:calc(10px + env(safe-area-inset-top));
+  z-index:99;background:var(--tx);color:#fff;border-radius:10px;padding:10px 14px;
+  box-shadow:0 6px 20px rgba(0,0,0,.22);display:flex;gap:10px;align-items:center;
+  max-width:min(92vw,420px);opacity:0;transition:.25s;pointer-events:none;font-size:13.5px;
+}
+.toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast .tt{font-weight:600}
+.toast .tb{opacity:.8;font-size:12.5px}
+.toast button{font:inherit;font-size:12px;background:rgba(255,255,255,.16);border:0;color:#fff;border-radius:6px;padding:4px 9px;cursor:pointer;flex:none}
+
+.tip{margin-top:16px;font-size:12px;color:var(--tx3);line-height:1.75}
+
+@media (max-width:900px){ .board.grid{grid-template-columns:repeat(3,minmax(0,1fr))} }
+@media (max-width:760px){
+  body{padding:14px 12px calc(36px + env(safe-area-inset-bottom));font-size:15px}
+  h1{font-size:17px}
+  .sub{display:block;margin:2px 0 0;font-size:12px}
+  .sec{padding:12px}
+  .sched{padding-bottom:4px}
+  .chip{min-width:88px;padding:8px}
+  .srow{gap:10px 16px}
+  button.tool{padding:8px 12px;font-size:13px}
+  .hero{gap:4px 16px} .hero .hl{font-size:16px;width:100%} .hero .kv,.hero .next{font-size:13.5px}
+  .strip{display:flex}
+  .day{padding:12px}
+  .dow{font-size:15px} .dnum{font-size:12px}
+  .wake{padding:7px 8px;margin:8px 0 10px} .wake input{font-size:16px} .wake .wl{font-size:13px}
+  .item{min-height:42px;padding:4px 6px;gap:7px}
+  .ck{width:20px;height:20px;border-radius:5px}
+  .item.done .ck::after{left:5px;top:1.5px;width:5px;height:9px}
+  .bell{width:22px;height:22px}
+  .time{font-size:13.5px;padding:5px 4px} .time input{width:70px;font-size:15px}
+  .text{font-size:15px;padding:5px 4px}
+  .del{opacity:1;width:24px;height:24px;font-size:17px}
+  .add{padding:9px;font-size:13px;margin-top:8px}
+  .tip{font-size:12.5px}
+}
+@media (max-width:380px){ .chip{min-width:78px} .mini{min-width:72px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <h1>一周提醒<span class="sub" id="todayLine"></span></h1>
+    <div class="spacer"></div>
+    <div class="tools">
+      <button class="tool" id="btnExport">导出</button>
+      <button class="tool" id="btnImport">导入</button>
+      <button class="tool" id="btnReset">恢复模板</button>
+      <input type="file" id="fileInput" accept=".json" hidden>
+    </div>
+  </div>
+
+  <!-- 本周排班 -->
+  <div class="sec">
+    <div class="sec-t"><b>本周排班</b><span>点某一天可循环切换：上班 → 值班 → 休息</span></div>
+    <div class="sched" id="sched"></div>
+    <div class="legend">
+      <i style="color:var(--duty)">值班</i> 6:30 起床 ·
+      <i style="color:var(--tx2)">上班</i> 7:10 起床 ·
+      <i style="color:var(--rest)">休息</i> 不设起床闹钟（自然醒）
+    </div>
+  </div>
+
+  <!-- 提醒设置 -->
+  <div class="sec">
+    <div class="sec-t"><b>到点提醒</b><span id="permState" class="state"></span></div>
+    <div class="srow">
+      <button class="tool" id="btnPerm">开启系统通知</button>
+      <button class="tool" id="btnTest">测试一下</button>
+      <label>提前 <select class="sel" id="selLead">
+        <option value="0">准点</option><option value="5">5 分钟</option>
+        <option value="10">10 分钟</option><option value="15">15 分钟</option>
+      </select></label>
+      <label><input type="checkbox" id="chkSound" checked> 提示音</label>
+    </div>
+  </div>
+
+  <!-- 同步到 iPhone -->
+  <div class="sec">
+    <div class="sec-t"><b>同步到 iPhone 日历</b><span>闹钟 App 不对外开放，只能写进日历；日历事件到点同样会响铃</span></div>
+    <div class="srow">
+      <label>导出 <select class="sel" id="selWeeks">
+        <option value="1">本周</option><option value="2">未来 2 周</option>
+        <option value="4" selected>未来 4 周</option><option value="8">未来 8 周</option>
+      </select></label>
+      <button class="tool on" id="btnIcs">导出日历文件 (.ics)</button>
+      <button class="tool" id="btnIcsCopy">复制内容</button>
+      <a class="tool lnk" id="lnkIcs" href="week.ics" target="_blank" rel="noopener">订阅地址</a>
+    </div>
+    <div class="legend">
+      <b style="color:var(--tx)">方式一（推荐）：</b>点「订阅地址」→ iPhone 会弹「是否订阅此日历」，选订阅就自动进日历，以后会自己刷新。<br>
+      <b style="color:var(--tx)">方式二：</b>点「导出」下载 .ics → 在 Safari 下载列表里点开它 → 选「添加到日历」。导进去的是你手机上的实时数据，但不会自动更新。<br>
+      重导或重订前先删掉旧的「一周提醒」日历，避免事件重复。<br>
+      <b style="color:var(--duty)">注意：</b>订阅读的是服务器上的固定文件，你在页面里的改动不会自己跑上去，要用下面推送一次。
+    </div>
+    <details class="sync">
+      <summary>让订阅跟着页面改动更新（需要 GitHub）</summary>
+      <div class="srow">
+        <select class="sel" id="ghPlat"><option value="github">GitHub</option><option value="gitee">Gitee 码云</option></select>
+        <input class="inp" id="ghOwner" placeholder="用户名">
+        <input class="inp" id="ghRepo" placeholder="仓库名">
+        <input class="inp" id="ghToken" type="password" placeholder="Token">
+        <button class="tool on" id="btnPush">推送到订阅源</button>
+      </div>
+      <div class="srow">
+        <input class="inp wide" id="ghProxy" placeholder="打不开 GitHub 时填加速前缀，如 https://ghproxy.net/">
+      </div>
+      <div class="legend">
+        填一次就记住了。GitHub 的 Token 在「Settings → Developer settings → Personal access tokens」生成，勾 <i>repo</i>；Gitee 的在「设置 → 私人令牌」生成，勾 <i>projects</i>。<br>
+        推送成功后，GitHub Pages 约 1–2 分钟重建；Gitee Pages 需要去仓库的「服务 → Gitee Pages」点一次「更新」。iPhone 会在几小时内自动拉最新版。
+      </div>
+    </details>
+  </div>
+
+  <!-- 今日摘要 -->
+  <div class="sec"><div class="hero" id="hero"></div></div>
+
+  <div class="navbar">
+    <button class="tool" id="prev">上一周</button>
+    <button class="tool" id="thisWeek">本周</button>
+    <button class="tool" id="next">下一周</button>
+    <b id="range"></b>
+  </div>
+
+  <div class="strip" id="strip"></div>
+  <div class="board grid" id="board"></div>
+
+  <p class="tip">
+    点时间或文字直接改 · 点小方块标记完成 · 点铃铛决定这项要不要响铃 · 每天底部「+ 添加」新增 · 18:00 及之后自动标记为晚上<br>
+    提醒需要页面保持打开（后台标签页也行）。手机锁屏或关闭浏览器后就收不到了；iOS 需要先用 Safari「添加到主屏幕」，再从桌面图标打开才能弹通知。
+  </p>
+</div>
+
+<div class="toast" id="toast">
+  <div><div class="tt" id="toastT"></div><div class="tb" id="toastB"></div></div>
+  <button id="toastX">知道了</button>
+</div>
+
+<script>
+/* ================= 1. 排班规则与每周计划模板 ================= */
+const MODE = {
+  duty:  { label:'值班', wake:'06:30', cls:'m-duty'  },
+  normal:{ label:'上班', wake:'07:10', cls:'m-normal'},
+  rest:  { label:'休息', wake:'',      cls:'m-rest'  }
+};
+const MODE_CYCLE = ['normal','duty','rest'];
+
+const TEMPLATE = [
+  { mode:'normal', items:[{t:'08:30',x:'出门通勤'},{t:'12:30',x:'午休'},{t:'19:00',x:'晚餐'},{t:'21:30',x:'今日复盘 + 明日计划'},{t:'23:00',x:'睡觉'}]},
+  { mode:'normal', items:[{t:'08:30',x:'出门通勤'},{t:'12:30',x:'午休'},{t:'19:30',x:'晚餐'},{t:'20:30',x:'看书 / 学习'},{t:'23:00',x:'睡觉'}]},
+  { mode:'normal', items:[{t:'08:30',x:'出门通勤'},{t:'12:30',x:'午休'},{t:'19:00',x:'晚餐'},{t:'20:00',x:'健身（力量 + 有氧）'},{t:'23:00',x:'睡觉'}]},
+  { mode:'normal', items:[{t:'08:30',x:'出门通勤'},{t:'12:30',x:'午休'},{t:'19:00',x:'晚餐'},{t:'20:30',x:'采购生活用品 / 缴费'},{t:'23:00',x:'睡觉'}]},
+  { mode:'normal', items:[{t:'08:30',x:'出门通勤'},{t:'12:30',x:'午休'},{t:'19:30',x:'晚餐 · 放松一下'},{t:'21:00',x:'周报 / 收尾工作'},{t:'23:30',x:'睡觉'}]},
+  { mode:'rest',   items:[{t:'10:00',x:'大扫除 · 洗衣'},{t:'15:00',x:'出门 · 见朋友'},{t:'20:00',x:'电影 / 娱乐'},{t:'23:30',x:'睡觉'}]},
+  { mode:'rest',   items:[{t:'10:30',x:'采购下周食材'},{t:'14:00',x:'整理房间'},{t:'20:30',x:'周复盘 · 排下周日程'},{t:'23:00',x:'睡觉，早点休息'}]}
+];
+
+const DOW = ['周一','周二','周三','周四','周五','周六','周日'];
+const KEY = 'weekly-reminder-v2';
+const SKEY = 'weekly-reminder-settings-v2';
+const NKEY = 'weekly-reminder-notified-v2';
+const NIGHT_FROM = 18;
+
+/* ================= 2. 工具 ================= */
+const pad = n => String(n).padStart(2,'0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = s => { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); };
+const wIdx  = d => (d.getDay()+6)%7;
+const monday = d => { const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-wIdx(x)); return x; };
+const isNight = t => parseInt(t.slice(0,2),10) >= NIGHT_FROM;
+const toMin = t => { const [h,m]=String(t||'00:00').split(':').map(Number); return h*60+(m||0); };
+const nowMin = () => { const d=new Date(); return d.getHours()*60+d.getMinutes(); };
+const uid = () => Math.random().toString(36).slice(2,9);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const isMobile = () => window.innerWidth < 760;
+const BELL_SVG = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 1.6a4.4 4.4 0 0 0-4.4 4.4v2.1L2.6 10.4h10.8l-1-2.3V6A4.4 4.4 0 0 0 8 1.6zM6.4 11.9a1.6 1.6 0 0 0 3.2 0" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+/* ================= 3. 存储 ================= */
+let store = {};
+try{ store = JSON.parse(localStorage.getItem(KEY) || '{}'); }catch(e){ store = {}; }
+if(!Object.keys(store).length){                       // 从旧版迁移事项
+  try{
+    const old = JSON.parse(localStorage.getItem('weekly-reminder-v1') || '{}');
+    Object.keys(old).forEach(k=>{ if(/^\d{4}-\d{2}-\d{2}$/.test(k) && old[k].items) store[k] = { mode:null, items:old[k].items }; });
+  }catch(e){}
+}
+let settings = { lead:5, sound:true };
+try{ settings = Object.assign(settings, JSON.parse(localStorage.getItem(SKEY) || '{}')); }catch(e){}
+let notified = {};
+try{ notified = JSON.parse(localStorage.getItem(NKEY) || '{}'); }catch(e){ notified = {}; }
+const save = () => { try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} };
+const saveSettings = () => { try{ localStorage.setItem(SKEY, JSON.stringify(settings)); }catch(e){} };
+const saveNotified = () => { try{ localStorage.setItem(NKEY, JSON.stringify(notified)); }catch(e){} };
+
+function dayData(ds){
+  let d = store[ds];
+  if(!d){
+    const tpl = TEMPLATE[wIdx(parse(ds))];
+    d = store[ds] = JSON.parse(JSON.stringify(tpl));
+  }
+  if(!d.items) d.items = [];
+  if(!MODE[d.mode]) d.mode = wIdx(parse(ds)) >= 5 ? 'rest' : 'normal';
+  if(d.wake === undefined) d.wake = MODE[d.mode].wake;
+  return d;
+}
+function setMode(ds, m){
+  const d = dayData(ds);
+  d.mode = m;
+  d.wake = MODE[m].wake;          // 排班一变，起床时间自动跟着变
+  save(); render();
+}
+
+/* ================= 4. 渲染 ================= */
+let viewStart = monday(new Date());
+let focusDate = ymd(new Date());
+
+const weekDays = () => { const a=[]; for(let i=0;i<7;i++){ const d=new Date(viewStart); d.setDate(d.getDate()+i); a.push(ymd(d)); } return a; };
+const sortedItems = ds => dayData(ds).items.slice().sort((a,b)=>toMin(a.t)-toMin(b.t));
+
+function renderSched(){
+  const tds = ymd(new Date());
+  document.getElementById('sched').innerHTML = weekDays().map(ds=>{
+    const d = parse(ds), i = wIdx(d), data = dayData(ds), m = MODE[data.mode];
+    return `<button class="chip ${m.cls} ${ds===tds?'today':''}" data-act="mode" data-date="${ds}">
+      <div class="c-dow">${DOW[i]}${ds===tds?' · 今天':''}</div>
+      <div class="c-mode">${m.label}</div>
+      <div class="c-wake">${data.wake ? data.wake+' 起床' : '不设闹钟'}</div>
+    </button>`;
+  }).join('');
+}
+
+function dayCard(ds){
+  const d = parse(ds), i = wIdx(d), data = dayData(ds);
+  const isToday = ds === ymd(new Date());
+  const items = sortedItems(ds);
+  const nm = nowMin();
+  const nextIdx = isToday ? items.findIndex(it=>!it.done && toMin(it.t) >= nm) : -1;
+  const nightN = items.filter(x=>isNight(x.t)).length;
+  const hasWake = !!data.wake;
+  return `
+  <div class="day ${isToday?'today':''} ${data.mode==='rest'?'rest':''}" data-date="${ds}">
+    <div class="dhead">
+      <span class="dow">${DOW[i]}</span>
+      <span class="dnum">${d.getMonth()+1}/${d.getDate()}${isToday?' · 今天':''}</span>
+      <span class="dtag">${MODE[data.mode].label}${nightN?' · 晚 '+nightN:''}</span>
+    </div>
+    <div class="wake ${hasWake?'':'none'}">
+      <span class="wl">起床</span>
+      ${hasWake
+        ? `<input type="time" value="${data.wake}" data-act="wake">`
+        : `<span class="wph">休息日 · 自然醒</span>`}
+      <button class="bell ${hasWake?'':'off'}" data-act="wakebell" title="${hasWake?'关闭起床闹钟':'给这天设个起床时间'}">${BELL_SVG}</button>
+    </div>
+    <ul class="items">
+      ${items.map((it,k)=>{
+        it.id = it.id || uid();
+        const on = it.bell !== false;
+        return `<li class="item ${isNight(it.t)?'night':'morning'} ${it.done?'done':''} ${k===nextIdx?'next':''}" data-id="${it.id}">
+          <button class="ck" data-act="toggle" title="标记完成"></button>
+          <button class="bell ${on?'':'off'}" data-act="bell" title="${on?'不提醒这项':'提醒这项'}">${BELL_SVG}</button>
+          <span class="time" data-act="time">${it.t}</span>
+          <span class="text" contenteditable data-act="text">${esc(it.x)}</span>
+          <button class="del" data-act="del">×</button>
+        </li>`;
+      }).join('')}
+    </ul>
+    <button class="add" data-act="add">+ 添加</button>
+  </div>`;
+}
+
+function miniCard(ds){
+  const d = parse(ds), i = wIdx(d), data = dayData(ds);
+  const items = sortedItems(ds);
+  const nightN = items.filter(x=>isNight(x.t)).length;
+  const m = MODE[data.mode];
+  return `<button class="mini ${ds===ymd(new Date())?'today':''} ${ds===focusDate?'sel':''}" data-act="focus" data-date="${ds}">
+    <div class="m-dow">${DOW[i]}</div>
+    <div class="m-date">${d.getMonth()+1}/${d.getDate()}</div>
+    <div class="m-wake">${data.wake || '自然醒'}</div>
+    <div class="m-mode">${m.label}</div>
+    <div class="m-cnt">${items.length} 项${nightN?`<span class="dot"></span>${nightN}`:''}</div>
+  </button>`;
+}
+
+function render(){
+  const now = new Date(), tds = ymd(now), td = dayData(tds);
+  document.getElementById('todayLine').textContent = `今天 ${now.getMonth()+1}月${now.getDate()}日 ${DOW[wIdx(now)]}`;
+
+  const nightLeft = td.items.filter(i=>isNight(i.t) && !i.done);
+  const nm = nowMin();
+  const up = td.items.filter(i=>!i.done && toMin(i.t) >= nm).sort((a,b)=>toMin(a.t)-toMin(b.t))[0];
+  document.getElementById('hero').innerHTML = `
+    <span class="hl">${DOW[wIdx(now)]} · ${now.getMonth()+1}/${now.getDate()} · ${MODE[td.mode].label}</span>
+    <span class="kv">起床 <b>${td.wake || '自然醒'}</b></span>
+    <span class="kv">未完成 <b>${td.items.filter(i=>!i.done).length}</b>/${td.items.length}</span>
+    <span class="kv">今晚 <b>${nightLeft.length}</b> 项</span>
+    <span class="next">${up ? '下一个：'+up.t+' '+esc(up.x) : (td.items.some(i=>!i.done)?'今天还有未完成事项':'今天都完成了 ✓')}</span>`;
+
+  const end = new Date(viewStart); end.setDate(end.getDate()+6);
+  document.getElementById('range').textContent = `${viewStart.getMonth()+1}/${viewStart.getDate()} – ${end.getMonth()+1}/${end.getDate()}`;
+
+  const days = weekDays();
+  if(!days.includes(focusDate)) focusDate = days.includes(tds) ? tds : days[0];
+
+  renderSched();
+  const board = document.getElementById('board');
+  if(isMobile()){
+    document.getElementById('strip').innerHTML = days.map(miniCard).join('');
+    board.className = 'board focus';
+    board.innerHTML = dayCard(focusDate);
+  }else{
+    document.getElementById('strip').innerHTML = '';
+    board.className = 'board grid';
+    board.innerHTML = days.map(dayCard).join('');
+  }
+  save();
+}
+
+/* ================= 5. 提醒：通知 + 声音 + 页面内横幅 ================= */
+let ac = null;
+function audioInit(){
+  try{
+    if(!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if(ac.state === 'suspended') ac.resume();
+  }catch(e){}
+}
+function beep(times){
+  if(!settings.sound) return;
+  audioInit(); if(!ac) return;
+  const t0 = ac.currentTime + 0.02;
+  for(let i=0;i<times;i++){
+    const o = ac.createOscillator(), g = ac.createGain(), s = t0 + i*0.5;
+    o.type = 'sine';
+    o.frequency.setValueAtTime(i % 2 ? 880 : 1245, s);
+    g.gain.setValueAtTime(0.0001, s);
+    g.gain.exponentialRampToValueAtTime(0.22, s + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, s + 0.42);
+    o.connect(g); g.connect(ac.destination);
+    o.start(s); o.stop(s + 0.45);
+  }
+}
+let toastTimer = null;
+function banner(title, body){
+  const el = document.getElementById('toast');
+  document.getElementById('toastT').textContent = title;
+  document.getElementById('toastB').textContent = body || '';
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 15000);
+}
+document.getElementById('toastX').onclick = () => document.getElementById('toast').classList.remove('show');
+
+function fire(tg){
+  const lead = settings.lead || 0;
+  const body = (lead ? lead + ' 分钟后 · ' : '') + tg.body;
+  let popped = false;
+  if('Notification' in window && Notification.permission === 'granted'){
+    try{
+      const n = new Notification(tg.title, { body, tag: tg.key, requireInteraction: !!tg.wake });
+      n.onclick = () => { try{ window.focus(); }catch(e){} n.close(); };
+      popped = true;
+    }catch(e){}
+  }
+  if(!popped) banner(tg.title, body);   // 没授权也要看到
+  beep(tg.wake ? 4 : 2);
+}
+
+function targets(){
+  const ds = ymd(new Date()), d = dayData(ds), out = [];
+  if(d.wake) out.push({ key:'wake', t:d.wake, wake:true,
+    title:`⏰ 该起床了 · ${d.wake}`,
+    body: d.mode === 'duty' ? '今天值班，比平时早 40 分钟' : '新的一天，起床啦' });
+  d.items.forEach(it=>{
+    if(it.done || it.bell === false) return;
+    out.push({ key:it.id, t:it.t, wake:false, title:`${it.t} ${it.x}`, body: isNight(it.t) ? '今晚的安排' : '今天要做的事' });
+  });
+  return out;
+}
+
+function tick(){
+  const now = new Date(), ds = ymd(now), nm = now.getHours()*60 + now.getMinutes();
+  Object.keys(notified).forEach(k=>{ if(k.slice(0,10) !== ds) delete notified[k]; });
+  saveNotified();
+  const lead = settings.lead || 0;
+  targets().forEach(tg=>{
+    const fireAt = toMin(tg.t) - lead;
+    if(nm >= fireAt && nm <= toMin(tg.t) + 3){        // 容忍被节流晚跑几分钟
+      const k = ds + '|' + tg.key;
+      if(!notified[k]){ notified[k] = 1; saveNotified(); fire(tg); }
+    }
+  });
+}
+
+/* 设置区 */
+function refreshPerm(){
+  const el = document.getElementById('permState'), btn = document.getElementById('btnPerm');
+  if(!('Notification' in window)){ el.textContent = '此浏览器不支持系统通知，会用页面内横幅提醒'; el.className='state no'; btn.style.display='none'; return; }
+  const p = Notification.permission;
+  if(p === 'granted'){ el.textContent = '已开启 ✓'; el.className = 'state ok'; btn.textContent = '重新授权'; btn.className = 'tool'; }
+  else if(p === 'denied'){ el.textContent = '被浏览器拒绝了，需到网站设置里手动放行'; el.className = 'state no'; btn.textContent = '再试一次'; btn.className = 'tool warn'; }
+  else { el.textContent = '还没开启，点右边按钮授权'; el.className = 'state'; btn.textContent = '开启系统通知'; btn.className = 'tool on'; }
+}
+document.getElementById('btnPerm').onclick = () => {
+  audioInit(); beep(1);
+  if(!('Notification' in window)){ banner('这个浏览器不支持系统通知', '到点会用页面内的横幅提醒你'); return; }
+  Notification.requestPermission().then(p => {
+    refreshPerm();
+    if(p === 'granted'){ setTimeout(()=>fire({key:'test', t:'', wake:false, title:'提醒已开启 ✓', body:'到点会这样通知你'}), 300); }
+  });
+};
+document.getElementById('btnTest').onclick = () => {
+  audioInit();
+  fire({ key:'test'+Date.now(), t:'', wake:false, title:'测试提醒 ✓', body:'长这样，到点就会弹这个' });
+};
+document.getElementById('selLead').onchange = e => { settings.lead = +e.target.value; saveSettings(); };
+document.getElementById('chkSound').onchange = e => { settings.sound = e.target.checked; saveSettings(); if(e.target.checked){ audioInit(); beep(1); } };
+
+/* ================= 6. 交互 ================= */
+function locate(node){
+  const day = node.closest('.day'); if(!day) return null;
+  const ds = day.dataset.date, data = dayData(ds);
+  const li = node.closest('.item');
+  return { ds, data, item: li ? data.items.find(x=>x.id===li.dataset.id) : null };
+}
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-act]'); if(!btn) return;
+  const act = btn.dataset.act;
+
+  if(act === 'mode'){                                  // 排班：上班 → 值班 → 休息
+    const ds = btn.dataset.date, cur = dayData(ds).mode;
+    setMode(ds, MODE_CYCLE[(MODE_CYCLE.indexOf(cur) + 1) % 3]);
+    return;
+  }
+  if(act === 'focus'){ focusDate = btn.dataset.date; render(); window.scrollTo({top:0,behavior:'smooth'}); return; }
+
+  const loc = locate(btn); if(!loc) return;
+
+  if(act === 'toggle' && loc.item){ loc.item.done = !loc.item.done; render(); }
+  else if(act === 'bell' && loc.item){ loc.item.bell = loc.item.bell === false ? true : false; render(); }
+  else if(act === 'del' && loc.item){ loc.data.items = loc.data.items.filter(x=>x!==loc.item); render(); }
+  else if(act === 'wakebell'){                         // 起床闹钟开关
+    loc.data.wake = loc.data.wake ? '' : MODE[loc.data.mode].wake || '07:10';
+    save(); render();
+  }
+  else if(act === 'add'){
+    const nid = uid();
+    loc.data.items.push({ id:nid, t: pad(new Date().getHours())+':00', x:'新事项', done:false, bell:true });
+    render();
+    const el = document.querySelector(`.item[data-id="${nid}"] .text`);
+    if(el){ el.focus(); const r=document.createRange(); r.selectNodeContents(el); const s=getSelection(); s.removeAllRanges(); s.addRange(r); }
+  }
+  else if(act === 'time' && loc.item){
+    const cell = btn;
+    if(cell.querySelector('input')) return;
+    cell.innerHTML = `<input type="time" value="${loc.item.t}">`;
+    const inp = cell.querySelector('input'); inp.focus();
+    const commit = () => { loc.item.t = inp.value || loc.item.t; render(); };
+    inp.addEventListener('blur', commit);
+    inp.addEventListener('keydown', ev => { if(ev.key === 'Enter') inp.blur(); });
+  }
+});
+
+document.addEventListener('change', e => {
+  const inp = e.target.closest('input[data-act="wake"]');
+  if(inp){ const ds = inp.closest('.day').dataset.date; dayData(ds).wake = inp.value; save(); render(); }
+});
+
+document.addEventListener('blur', e => {
+  const t = e.target.closest('[data-act="text"]');
+  if(t){ const loc = locate(t); if(loc && loc.item){ loc.item.x = t.textContent.trim() || '未命名'; render(); } }
+}, true);
+
+document.addEventListener('keydown', e => {
+  const t = e.target.closest('[data-act="text"]');
+  if(t && e.key === 'Enter'){ e.preventDefault(); t.blur(); }
+});
+
+/* ================= 7. 生成 .ics，导入 iPhone 日历 ================= */
+const icsEsc = s => String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
+const icsDate = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+const icsLocal = d => `${icsDate(d)}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+const icsUTC = d => `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+const TZID = 'Asia/Shanghai';
+const VTZ = ['BEGIN:VTIMEZONE',`TZID:${TZID}`,'BEGIN:STANDARD','DTSTART:19700101T000000',
+             'TZOFFSETFROM:+0800','TZOFFSETTO:+0800','TZNAME:CST','END:STANDARD','END:VTIMEZONE'];
+
+function eventLines(uid, start, mins, summary, desc, alarm){
+  const end = new Date(start.getTime() + mins*60000);
+  const L = ['BEGIN:VEVENT', `UID:${uid}@weekly-reminder`, `DTSTAMP:${icsUTC(new Date())}`,
+    `DTSTART;TZID=${TZID}:${icsLocal(start)}`, `DTEND;TZID=${TZID}:${icsLocal(end)}`,
+    `SUMMARY:${icsEsc(summary)}`];
+  if(desc) L.push(`DESCRIPTION:${icsEsc(desc)}`);
+  if(alarm){                                            // 提前提醒 + 准点提醒，双保险
+    L.push('BEGIN:VALARM','ACTION:DISPLAY',`DESCRIPTION:${icsEsc(summary)}`,`TRIGGER:${alarm}`,'END:VALARM');
+    L.push('BEGIN:VALARM','ACTION:DISPLAY',`DESCRIPTION:${icsEsc(summary)}`,'TRIGGER:-PT0M','END:VALARM');
+  }
+  L.push('END:VEVENT');
+  return L;
+}
+
+function buildICS(weeks){
+  const lead = settings.lead || 0;
+  const trig = `-PT${lead}M`;
+  const L = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Weekly Reminder//ZH','CALSCALE:GREGORIAN',
+             'METHOD:PUBLISH','X-WR-CALNAME:一周提醒',`X-WR-TIMEZONE:${TZID}`, ...VTZ];
+  const base = new Date(viewStart);
+  for(let w=0; w<weeks; w++){
+    for(let i=0;i<7;i++){
+      const d = new Date(base); d.setDate(d.getDate() + w*7 + i);
+      const ds = ymd(d), data = dayData(ds), m = MODE[data.mode];
+      const next = new Date(d); next.setDate(d.getDate()+1);
+
+      // 全天排班条（一眼看出哪天值班/休息）
+      L.push('BEGIN:VEVENT', `UID:sched-${ds}@weekly-reminder`, `DTSTAMP:${icsUTC(new Date())}`,
+        `DTSTART;VALUE=DATE:${icsDate(d)}`, `DTEND;VALUE=DATE:${icsDate(next)}`,
+        `SUMMARY:${icsEsc(m.label + (data.wake ? ' · 起床 ' + data.wake : ' · 自然醒'))}`,
+        'TRANSP:TRANSPARENT', 'END:VEVENT');
+
+      // 起床提醒
+      if(data.wake){
+        const [hh,mm] = data.wake.split(':').map(Number);
+        const st = new Date(d); st.setHours(hh, mm, 0, 0);
+        L.push(...eventLines(`wake-${ds}`, st, 10, `⏰ 起床 ${data.wake}`,
+          m.label + (m === MODE.duty ? ' · 比平时早 40 分钟' : ''), trig));
+      }
+
+      // 当天事项
+      sortedItems(ds).forEach(it=>{
+        const [h,mi] = String(it.t).split(':').map(Number);
+        if(isNaN(h)) return;
+        const st = new Date(d); st.setHours(h, mi||0, 0, 0);
+        L.push(...eventLines(`item-${ds}-${it.id||uid()}`, st, 20, `${it.t} ${it.x}`,
+          isNight(it.t) ? '晚上安排' : '白天安排', it.bell === false ? null : trig));
+      });
+    }
+  }
+  L.push('END:VCALENDAR');
+  return L.join('\r\n');
+}
+
+document.getElementById('btnIcs').onclick = async () => {
+  const n = +document.getElementById('selWeeks').value;
+  const ics = buildICS(n);
+  const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+  let done = false;
+  try{
+    const file = new File([blob], 'weekly-reminder.ics', {type:'text/calendar'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({ files:[file], title:'一周提醒日历' });
+      done = true;
+    }
+  }catch(err){
+    if(err && err.name === 'AbortError'){ banner('已取消','想同步时再点一次导出'); return; }
+  }
+  if(!done){                                            // 不支持分享就走普通下载
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'weekly-reminder.ics';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+  }
+  banner('已导出 ' + n + ' 周的日历文件', done ? '在「文件」里点开它，选添加到日历' : '在下载列表里点开它，选添加到日历');
+};
+document.getElementById('btnIcsCopy').onclick = async () => {
+  const n = +document.getElementById('selWeeks').value;
+  const ics = buildICS(n);
+  try{
+    await navigator.clipboard.writeText(ics);
+    banner('已复制 ' + n + ' 周的日历内容', '可粘贴到备忘录或邮件里再到手机打开');
+  }catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = ics; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); banner('已复制日历内容',''); }catch(e2){ banner('复制失败，请用导出按钮',''); }
+    ta.remove();
+  }
+};
+
+(function(){
+  const lnk = document.getElementById('lnkIcs');
+  if(!lnk) return;
+  if(location.protocol === 'file:') lnk.style.display = 'none';
+  else lnk.href = 'week.ics';
+})();
+
+/* GitHub 推送：把页面里的改动写回订阅源文件 */
+function b64utf8(str){
+  const bytes = new TextEncoder().encode(str); let bin = ''; const CH = 0x8000;
+  for(let i=0;i<bytes.length;i+=CH) bin += String.fromCharCode.apply(null, bytes.subarray(i, i+CH));
+  return btoa(bin);
+}
+['ghOwner','ghRepo','ghToken','ghProxy','ghPlat'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(!el) return;
+  if(settings[id] && el.tagName !== 'SELECT') el.value = settings[id];
+  if(settings[id] && el.tagName === 'SELECT') el.value = settings[id];
+  el.addEventListener('change', ()=>{ settings[id] = el.value.trim(); saveSettings(); });
+});
+document.getElementById('btnPush').onclick = async () => {
+  const owner = (document.getElementById('ghOwner').value||'').trim();
+  const repo  = (document.getElementById('ghRepo').value||'').trim();
+  const tok   = (document.getElementById('ghToken').value||'').trim();
+  const plat  = document.getElementById('ghPlat').value || 'github';
+  const proxy = (document.getElementById('ghProxy').value||'').trim().replace(/\/+$/,'');
+  if(!owner || !repo || !tok){ banner('先填用户名、仓库名和 Token','这三样缺一不可'); return; }
+  settings.ghOwner = owner; settings.ghRepo = repo; settings.ghToken = tok;
+  settings.ghPlat = plat; settings.ghProxy = proxy; saveSettings();
+
+  const weeks = +document.getElementById('selWeeks').value || 4;
+  const old = viewStart; viewStart = new Date();      // 从今天开始生成，避免写进过去的日期
+  const ics = buildICS(weeks); viewStart = old;
+
+  const path = 'week.ics', branch = settings.ghBranch || 'main';
+  const isGitee = plat === 'gitee';
+  let api = isGitee
+    ? `https://gitee.com/api/v5/repos/${owner}/${repo}/contents/${path}`
+    : `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+  const H = { 'Content-Type':'application/json' };
+  if(!isGitee){ H.Authorization = 'token ' + tok; H.Accept = 'application/vnd.github+json'; }
+  const auth = isGitee ? 'access_token=' + encodeURIComponent(tok) : '';
+  if(proxy) api = proxy + '/' + api;                 // 加速镜像：前缀 + 完整地址
+
+  try{
+    banner('正在推送…', weeks + ' 周日程');
+    let sha = null;
+    const q = [auth, 'ref=' + branch].filter(Boolean).join('&');
+    const cur = await fetch(api + (q ? '?' + q : ''), { headers:H });
+    if(cur.ok){ const j = await cur.json(); sha = j.sha || null; }
+    const body = { message:'更新日程 ' + ymd(new Date()), content: b64utf8(ics), branch };
+    if(isGitee) body.access_token = tok;
+    if(sha) body.sha = sha;
+    const res = await fetch(api + (isGitee && auth ? '?' + auth : ''), { method:'PUT', headers:H, body: JSON.stringify(body) });
+    if(res.ok || res.status === 201){
+      banner('推送成功 ✓', isGitee ? '记得去 Gitee Pages 点一次「更新」' : 'iPhone 会在几小时内自动同步');
+    }else{
+      const j = await res.json().catch(()=>({}));
+      banner('推送失败：' + (j.message || res.status), '检查用户名、仓库名和 Token 权限');
+    }
+  }catch(e){
+    banner('推送失败','网络不通或加速前缀不可用');
+  }
+};
+
+/* 周切换 / 导入导出 */
+const shift = n => { viewStart.setDate(viewStart.getDate()+n); render(); };
+document.getElementById('prev').onclick = () => shift(-7);
+document.getElementById('next').onclick = () => shift(7);
+document.getElementById('thisWeek').onclick = () => { viewStart = monday(new Date()); focusDate = ymd(new Date()); render(); };
+
+document.getElementById('btnExport').onclick = () => {
+  const blob = new Blob([JSON.stringify(store,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `weekly-reminder-${ymd(new Date())}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+};
+document.getElementById('btnImport').onclick = () => document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange = e => {
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => { try{ store = JSON.parse(r.result); save(); render(); }catch(err){ alert('文件解析失败'); } };
+  r.readAsText(f); e.target.value = '';
+};
+document.getElementById('btnReset').onclick = () => {
+  if(confirm('把当前这一周恢复成模板？其他周不受影响。')){
+    weekDays().forEach((ds,i)=>{ store[ds] = JSON.parse(JSON.stringify(TEMPLATE[i])); });
+    save(); render();
+  }
+};
+
+/* 启动 */
+document.getElementById('selLead').value = String(settings.lead);
+document.getElementById('chkSound').checked = !!settings.sound;
+refreshPerm();
+
+let lastMode = isMobile();
+window.addEventListener('resize', () => { const m = isMobile(); if(m !== lastMode){ lastMode = m; render(); } });
+window.addEventListener('orientationchange', () => setTimeout(render, 200));
+
+const busy = () => { const a = document.activeElement; return a && (a.isContentEditable || a.tagName === 'INPUT'); };
+setInterval(() => { if(!busy()) render(); }, 60000);
+setInterval(tick, 20000);      // 每 20 秒检查一次是否到点
+tick();
+
+render();
+</script>
+</body>
+</html>
